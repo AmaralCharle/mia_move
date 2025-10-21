@@ -1,1 +1,27 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Build output
+dist/
+build/
+
+# OS files
+.DS_Store
+
+# Editor folders
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vite cache
+.vite/
 node_modules\n.env*\n.DS_Store\ndist\n
+node_modules

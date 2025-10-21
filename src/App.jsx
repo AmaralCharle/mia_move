@@ -529,8 +529,13 @@ const StockManagement = ({ db, userId, products, showToast, categories }) => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!db || !userId || !formData.name.trim()) {
-        return showToast("O nome do produto é obrigatório.", 'error');
+    if (!formData.name.trim()) {
+        showToast("O nome do produto é obrigatório.", 'error');
+        return;
+    }
+    if (!db || !userId) {
+        showToast("Conexão com o banco indisponível. Verifique a configuração do Firebase.", 'error');
+        return;
     }
     if (formData.variants.some(v => !v.sku.trim() || parseFloat(v.salePrice) <= 0)) {
         return showToast("Todas as variações devem ter SKU e Preço de Venda válidos.", 'error');
@@ -550,13 +555,18 @@ const StockManagement = ({ db, userId, products, showToast, categories }) => {
         updatedAt: Timestamp.now() 
       };
 
-      if (editingProduct) {
-        await updateDoc(doc(productsRef, editingProduct.id), dataToSave);
-        showToast("Produto atualizado!", 'success');
-      } else {
-        await addDoc(productsRef, { ...dataToSave, createdAt: Timestamp.now() });
-        showToast("Novo produto adicionado!", 'success');
-      }
+            try {
+                if (editingProduct) {
+                    await updateDoc(doc(productsRef, editingProduct.id), dataToSave);
+                    showToast("Produto atualizado!", 'success');
+                } else {
+                    await addDoc(productsRef, { ...dataToSave, createdAt: Timestamp.now() });
+                    showToast("Novo produto adicionado!", 'success');
+                }
+            } catch (err) {
+                console.error('Erro ao salvar produto:', err);
+                showToast('Erro ao salvar produto. Verifique conexão e permissões.', 'error');
+            }
 
       setIsModalOpen(false);
       setEditingProduct(null);
@@ -1370,13 +1380,18 @@ const ExpensesManagement = ({ db, userId, expenses, showToast, recurringExpenses
       
       const expensesRef = collection(db, getUserCollectionPath(userId, 'expenses'));
 
-      if (editingExpense) {
-        await updateDoc(doc(expensesRef, editingExpense.id), dataToSave);
-        showToast("Despesa atualizada!", 'success');
-      } else {
-        await addDoc(expensesRef, dataToSave);
-        showToast("Despesa adicionada!", 'success');
-      }
+            try {
+                if (editingExpense) {
+                    await updateDoc(doc(expensesRef, editingExpense.id), dataToSave);
+                    showToast("Despesa atualizada!", 'success');
+                } else {
+                    await addDoc(expensesRef, dataToSave);
+                    showToast("Despesa adicionada!", 'success');
+                }
+            } catch (err) {
+                console.error('Erro ao salvar despesa:', err);
+                showToast('Erro ao salvar despesa. Verifique conexão e permissões.', 'error');
+            }
       setIsModalOpen(false);
       setEditingExpense(null);
     } catch (error) {
@@ -1562,12 +1577,17 @@ const RecurringExpensesManagement = ({ isOpen, onClose, db, userId, showToast, r
             showToast("Descrição e valor são obrigatórios", "error");
             return;
         }
-        await addDoc(collection(db, getUserCollectionPath(userId, 'recurringExpenses')), {
-            ...formData,
-            amount: parseFloat(formData.amount)
-        });
-        setFormData(defaultForm);
-        showToast("Despesa recorrente adicionada!", "success");
+        try {
+            await addDoc(collection(db, getUserCollectionPath(userId, 'recurringExpenses')), {
+                ...formData,
+                amount: parseFloat(formData.amount)
+            });
+            setFormData(defaultForm);
+            showToast("Despesa recorrente adicionada!", "success");
+        } catch (err) {
+            console.error('Erro ao adicionar despesa recorrente:', err);
+            showToast('Erro ao adicionar despesa recorrente. Verifique conexão e permissões.', 'error');
+        }
     };
 
     const handleDelete = async (id) => {
@@ -2259,9 +2279,14 @@ const CategoryManagement = ({ db, userId, showToast, categories, isOpen, onClose
     const handleAddCategory = async () => {
         if (newCategoryName.trim() === '') return;
         const categoriesRef = collection(db, getUserCollectionPath(userId, 'categories'));
-        await addDoc(categoriesRef, { name: newCategoryName.trim() });
-        setNewCategoryName('');
-        showToast('Categoria adicionada!', 'success');
+        try {
+            await addDoc(categoriesRef, { name: newCategoryName.trim() });
+            setNewCategoryName('');
+            showToast('Categoria adicionada!', 'success');
+        } catch (err) {
+            console.error('Erro ao adicionar categoria:', err);
+            showToast('Erro ao adicionar categoria. Verifique conexão e permissões.', 'error');
+        }
     };
     
     const handleDeleteCategory = async (id) => {

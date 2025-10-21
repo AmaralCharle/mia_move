@@ -555,18 +555,21 @@ const StockManagement = ({ db, userId, products, showToast, categories }) => {
         updatedAt: Timestamp.now() 
       };
 
-            try {
-                if (editingProduct) {
-                    await updateDoc(doc(productsRef, editingProduct.id), dataToSave);
-                    showToast("Produto atualizado!", 'success');
-                } else {
-                    await addDoc(productsRef, { ...dataToSave, createdAt: Timestamp.now() });
-                    showToast("Novo produto adicionado!", 'success');
-                }
-            } catch (err) {
-                console.error('Erro ao salvar produto:', err);
-                showToast('Erro ao salvar produto. Verifique conexão e permissões.', 'error');
-            }
+                    try {
+                        console.debug('Firestore write: products', { path: getUserCollectionPath(userId, 'products'), userId, payload: dataToSave });
+                        if (editingProduct) {
+                            console.debug('Firestore update (product):', editingProduct.id, dataToSave);
+                            await updateDoc(doc(productsRef, editingProduct.id), dataToSave);
+                            showToast("Produto atualizado!", 'success');
+                        } else {
+                            console.debug('Firestore add (product):', dataToSave);
+                            await addDoc(productsRef, { ...dataToSave, createdAt: Timestamp.now() });
+                            showToast("Novo produto adicionado!", 'success');
+                        }
+                    } catch (err) {
+                        console.error('Erro ao salvar produto:', err);
+                        showToast('Erro ao salvar produto. Verifique conexão e permissões.', 'error');
+                    }
 
       setIsModalOpen(false);
       setEditingProduct(null);
@@ -1380,18 +1383,21 @@ const ExpensesManagement = ({ db, userId, expenses, showToast, recurringExpenses
       
       const expensesRef = collection(db, getUserCollectionPath(userId, 'expenses'));
 
-            try {
-                if (editingExpense) {
-                    await updateDoc(doc(expensesRef, editingExpense.id), dataToSave);
-                    showToast("Despesa atualizada!", 'success');
-                } else {
-                    await addDoc(expensesRef, dataToSave);
-                    showToast("Despesa adicionada!", 'success');
-                }
-            } catch (err) {
-                console.error('Erro ao salvar despesa:', err);
-                showToast('Erro ao salvar despesa. Verifique conexão e permissões.', 'error');
-            }
+                    try {
+                        console.debug('Firestore write: expenses', { path: getUserCollectionPath(userId, 'expenses'), userId, payload: dataToSave });
+                        if (editingExpense) {
+                            console.debug('Firestore update (expense):', editingExpense.id, dataToSave);
+                            await updateDoc(doc(expensesRef, editingExpense.id), dataToSave);
+                            showToast("Despesa atualizada!", 'success');
+                        } else {
+                            console.debug('Firestore add (expense):', dataToSave);
+                            await addDoc(expensesRef, dataToSave);
+                            showToast("Despesa adicionada!", 'success');
+                        }
+                    } catch (err) {
+                        console.error('Erro ao salvar despesa:', err);
+                        showToast('Erro ao salvar despesa. Verifique conexão e permissões.', 'error');
+                    }
       setIsModalOpen(false);
       setEditingExpense(null);
     } catch (error) {
@@ -1578,10 +1584,10 @@ const RecurringExpensesManagement = ({ isOpen, onClose, db, userId, showToast, r
             return;
         }
         try {
-            await addDoc(collection(db, getUserCollectionPath(userId, 'recurringExpenses')), {
-                ...formData,
-                amount: parseFloat(formData.amount)
-            });
+            const path = getUserCollectionPath(userId, 'recurringExpenses');
+            const payload = { ...formData, amount: parseFloat(formData.amount) };
+            console.debug('Firestore add: recurringExpenses', { path, userId, payload });
+            await addDoc(collection(db, path), payload);
             setFormData(defaultForm);
             showToast("Despesa recorrente adicionada!", "success");
         } catch (err) {
@@ -2162,10 +2168,18 @@ const Reports = ({ sales, products, expenses, db, userId, showToast }) => {
 
   const pendingSales = useMemo(() => sales.filter(s => s.paymentStatus === 'a_receber' && s.status !== 'estornada').sort((a,b) => (a.dueDate || a.date).seconds - (b.dueDate || b.date).seconds), [sales]);
   
-  const handleMarkAsPaid = async (saleId) => {
-    await updateDoc(doc(db, getUserCollectionPath(userId, 'sales'), saleId), { paymentStatus: 'recebido' });
-    showToast('Venda marcada como recebida!', 'success');
-  };
+    const handleMarkAsPaid = async (saleId) => {
+        try {
+            const path = `${getUserCollectionPath(userId, 'sales')}/${saleId}`;
+            const payload = { paymentStatus: 'recebido' };
+            console.debug('Firestore update: sales', { path, userId, payload });
+            await updateDoc(doc(db, getUserCollectionPath(userId, 'sales'), saleId), payload);
+            showToast('Venda marcada como recebida!', 'success');
+        } catch (err) {
+            console.error('Erro ao marcar venda como paga:', err);
+            showToast('Erro ao marcar venda como paga. Verifique conexão e permissões.', 'error');
+        }
+    };
 
   const detailedProductAnalysis = useMemo(() => {
     const allVariants = products.flatMap(p => (p.variants || []).map(v => ({...v, productId: p.id, productName: p.name, createdAt: p.createdAt })));
@@ -2280,7 +2294,10 @@ const CategoryManagement = ({ db, userId, showToast, categories, isOpen, onClose
         if (newCategoryName.trim() === '') return;
         const categoriesRef = collection(db, getUserCollectionPath(userId, 'categories'));
         try {
-            await addDoc(categoriesRef, { name: newCategoryName.trim() });
+            const path = getUserCollectionPath(userId, 'categories');
+            const payload = { name: newCategoryName.trim() };
+            console.debug('Firestore add: categories', { path, userId, payload });
+            await addDoc(categoriesRef, payload);
             setNewCategoryName('');
             showToast('Categoria adicionada!', 'success');
         } catch (err) {
